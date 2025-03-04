@@ -28,97 +28,80 @@ logger.debug(`Database configuration:
   - Connection Limit: 5
 `);
 
-// Initialize database by creating tables if they don't exist
+// Initialize database tables
 export const initDatabase = async (): Promise<void> => {
   let conn;
   try {
-    logger.debug('Attempting to get database connection from pool');
     conn = await pool.getConnection();
     logger.info('Connected to MariaDB database');
-    logger.debug(`Database connection established: ${conn.threadId}`);
 
-    // Create tables for different data types
-    const createTableQueries = {
-      digital_inputs: `
-        CREATE TABLE IF NOT EXISTS digital_inputs (
-          record_id BIGINT NOT NULL AUTO_INCREMENT,
-          id VARCHAR(50) NOT NULL,
-          ip1 BOOLEAN,
-          ip2 BOOLEAN,
-          ip3 BOOLEAN,
-          ip4 BOOLEAN,
-          ip5 BOOLEAN,
-          ip6 BOOLEAN,
-          ip7 BOOLEAN,
-          ip8 BOOLEAN,
-          ip9 BOOLEAN,
-          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY (record_id)
-        )
-      `,
-      analyzer_data: `
-        CREATE TABLE IF NOT EXISTS analyzer_data (
-          record_id BIGINT NOT NULL AUTO_INCREMENT,
-          id VARCHAR(50) NOT NULL,
-          ip1 BOOLEAN,
-          ip2 BOOLEAN,
-          ip3 BOOLEAN,
-          ip4 BOOLEAN,
-          ip5 BOOLEAN,
-          ip6 BOOLEAN,
-          ip7 BOOLEAN,
-          ip8 BOOLEAN,
-          ip9 BOOLEAN,
-          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY (record_id)
-        )
-      `,
-      analog_input: `
-        CREATE TABLE IF NOT EXISTS analog_input (
-          record_id BIGINT NOT NULL AUTO_INCREMENT,
-          id VARCHAR(50) NOT NULL,
-          ip1 BOOLEAN,
-          ip2 BOOLEAN,
-          ip3 BOOLEAN,
-          ip4 BOOLEAN,
-          ip5 BOOLEAN,
-          ip6 BOOLEAN,
-          ip7 BOOLEAN,
-          ip8 BOOLEAN,
-          ip9 BOOLEAN,
-          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY (record_id)
-        )
-      `,
-      device_data: `
-        CREATE TABLE IF NOT EXISTS device_data (
-          record_id BIGINT NOT NULL AUTO_INCREMENT,
-          id VARCHAR(50) NOT NULL,
-          ip1 BOOLEAN,
-          ip2 BOOLEAN,
-          ip3 BOOLEAN,
-          ip4 BOOLEAN,
-          ip5 BOOLEAN,
-          ip6 BOOLEAN,
-          ip7 BOOLEAN,
-          ip8 BOOLEAN,
-          ip9 BOOLEAN,
-          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY (record_id)
-        )
-      `
-    };
+    // Create digital_inputs table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS digital_inputs (
+        record_id BIGINT NOT NULL AUTO_INCREMENT,
+        id VARCHAR(50) NOT NULL,
+        ip1 BOOLEAN,
+        ip2 BOOLEAN,
+        ip3 BOOLEAN,
+        ip4 BOOLEAN,
+        ip5 BOOLEAN,
+        ip6 BOOLEAN,
+        ip7 BOOLEAN,
+        ip8 BOOLEAN,
+        ip9 BOOLEAN,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (record_id)
+      )
+    `);
+    logger.debug('Digital inputs table initialized');
 
-    for (const [tableName, query] of Object.entries(createTableQueries)) {
-      logger.debug(`Creating table if not exists: ${tableName}`);
-      const result = await conn.query(query);
-      logger.debug(`Table creation result for ${tableName}: ${safeStringify(result)}`);
-    }
+    // Create analyzer_data table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS analyzer_data (
+        id VARCHAR(50),
+        kw DOUBLE,
+        kwr DOUBLE,
+        kwy DOUBLE,
+        kwb DOUBLE,
+        vry DOUBLE,
+        vyb DOUBLE,
+        vbr DOUBLE,
+        ir DOUBLE,
+        iy DOUBLE,
+        ib DOUBLE,
+        fault VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY(id, created_at)
+      )
+    `);
+    logger.debug('Analyzer data table initialized');
 
-    logger.info('All database tables initialized');
+    // Create analog_inputs table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS analog_inputs (
+        id VARCHAR(50),
+        ai1 DOUBLE,
+        ai2 DOUBLE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY(id, created_at)
+      )
+    `);
+    logger.debug('Analog inputs table initialized');
+
+    // Create device_data table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS device_data (
+        id VARCHAR(50) PRIMARY KEY,
+        ip_address VARCHAR(20),
+        random_number INT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    logger.debug('Device data table initialized');
+
+    logger.info('All database tables initialized successfully');
   } catch (err) {
     logger.error('Error initializing database:', err);
-    logger.debug(`Database initialization error details: ${safeStringify(err)}`);
     throw err;
   } finally {
     if (conn) conn.release();
@@ -127,128 +110,293 @@ export const initDatabase = async (): Promise<void> => {
 
 // Digital Inputs Functions
 export const insertDigitalInputs = async (deviceId: string, values: number[]): Promise<any> => {
-  return insertData('digital_inputs', deviceId, values);
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const paddedValues = [...values];
+    while (paddedValues.length < 9) paddedValues.push(0);
+
+    const result = await conn.query(
+      `INSERT INTO digital_inputs (id, ip1, ip2, ip3, ip4, ip5, ip6, ip7, ip8, ip9) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [deviceId, ...paddedValues]
+    );
+    return result;
+  } catch (err) {
+    logger.error('Error inserting digital inputs:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
 export const getAllDigitalInputs = async (): Promise<any[]> => {
-  return getAllData('digital_inputs');
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    return await conn.query('SELECT * FROM digital_inputs ORDER BY created_at DESC');
+  } catch (err) {
+    logger.error('Error getting digital inputs:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
-export const getLatestDigitalInputs = async (): Promise<any> => {
-  return getLatestData('digital_inputs');
+export const getLatestDigitalInputs = async (): Promise<any[]> => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const rows = await conn.query(`
+      SELECT di1.*
+      FROM digital_inputs di1
+      INNER JOIN (
+        SELECT id, MAX(created_at) as max_created_at
+        FROM digital_inputs
+        GROUP BY id
+      ) di2 ON di1.id = di2.id AND di1.created_at = di2.max_created_at
+      ORDER BY di1.id
+    `);
+    return rows;
+  } catch (err) {
+    logger.error('Error getting latest digital inputs:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
 // Analyzer Data Functions
+interface AnalyzerData {
+  kw: number;
+  kwr: number;
+  kwy: number;
+  kwb: number;
+  vry: number;
+  vyb: number;
+  vbr: number;
+  ir: number;
+  iy: number;
+  ib: number;
+  fault: string;
+}
+
 export const insertAnalyzerData = async (deviceId: string, values: number[]): Promise<any> => {
-  return insertData('analyzer_data', deviceId, values);
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const data: AnalyzerData = {
+      kw: values[0] || 0,
+      kwr: values[1] || 0,
+      kwy: values[2] || 0,
+      kwb: values[3] || 0,
+      vry: values[4] || 0,
+      vyb: values[5] || 0,
+      vbr: values[6] || 0,
+      ir: values[7] || 0,
+      iy: values[8] || 0,
+      ib: values[9] || 0,
+      fault: values[10]?.toString() || ''
+    };
+
+    const result = await conn.query(
+      `INSERT INTO analyzer_data 
+       (id, kw, kwr, kwy, kwb, vry, vyb, vbr, ir, iy, ib, fault) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [deviceId, data.kw, data.kwr, data.kwy, data.kwb, data.vry, data.vyb, 
+       data.vbr, data.ir, data.iy, data.ib, data.fault]
+    );
+    return result;
+  } catch (err) {
+    logger.error('Error inserting analyzer data:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
 export const getAllAnalyzerData = async (): Promise<any[]> => {
-  return getAllData('analyzer_data');
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    return await conn.query('SELECT * FROM analyzer_data ORDER BY created_at DESC');
+  } catch (err) {
+    logger.error('Error getting analyzer data:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
 export const getLatestAnalyzerData = async (): Promise<any> => {
-  return getLatestData('analyzer_data');
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const rows = await conn.query('SELECT * FROM analyzer_data ORDER BY created_at DESC LIMIT 1');
+    return rows[0] || null;
+  } catch (err) {
+    logger.error('Error getting latest analyzer data:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
-// Analog Input Functions
-export const insertAnalogInput = async (deviceId: string, values: number[]): Promise<any> => {
-  return insertData('analog_input', deviceId, values);
+// Analog Inputs Functions
+interface AnalogInputs {
+  ai1: number;
+  ai2: number;
+}
+
+export const insertAnalogInputs = async (deviceId: string, values: number[]): Promise<any> => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const data: AnalogInputs = {
+      ai1: values[0] || 0,
+      ai2: values[1] || 0
+    };
+
+    const result = await conn.query(
+      `INSERT INTO analog_inputs (id, ai1, ai2) 
+       VALUES (?, ?, ?)`,
+      [deviceId, data.ai1, data.ai2]
+    );
+    return result;
+  } catch (err) {
+    logger.error('Error inserting analog inputs:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
-export const getAllAnalogInput = async (): Promise<any[]> => {
-  return getAllData('analog_input');
+export const getAllAnalogInputs = async (): Promise<any[]> => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    return await conn.query('SELECT * FROM analog_inputs ORDER BY created_at DESC');
+  } catch (err) {
+    logger.error('Error getting analog inputs:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
-export const getLatestAnalogInput = async (): Promise<any> => {
-  return getLatestData('analog_input');
+export const getLatestAnalogInputs = async (): Promise<any> => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const rows = await conn.query('SELECT * FROM analog_inputs ORDER BY created_at DESC LIMIT 1');
+    return rows[0] || null;
+  } catch (err) {
+    logger.error('Error getting latest analog inputs:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
 // Device Data Functions
-export const insertDeviceData = async (deviceId: string, values: number[]): Promise<any> => {
-  return insertData('device_data', deviceId, values);
+interface DeviceData {
+  ip_address: string;
+  random_number: number;
+}
+
+export const insertDeviceData = async (deviceId: string, random_number: number = 0, ip="00.00.00.00"): Promise<any> => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const data: DeviceData = {
+      ip_address: ip,
+      random_number: random_number
+    };
+
+    const result = await conn.query(
+      `INSERT INTO device_data (id, ip_address, random_number) 
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+       ip_address = VALUES(ip_address),
+       random_number = VALUES(random_number)`,
+      [deviceId, data.ip_address, data.random_number]
+    );
+    return result;
+  } catch (err) {
+    logger.error('Error inserting device data:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
 export const getAllDeviceData = async (): Promise<any[]> => {
-  return getAllData('device_data');
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    return await conn.query('SELECT * FROM device_data ORDER BY created_at DESC');
+  } catch (err) {
+    logger.error('Error getting device data:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
 export const getLatestDeviceData = async (): Promise<any> => {
-  return getLatestData('device_data');
-};
-
-// Generic data functions (private)
-const insertData = async (
-  tableName: string,
-  deviceId: string,
-  values: number[]
-): Promise<any> => {
   let conn;
   try {
-    logger.debug(`Attempting to insert data into ${tableName}: id=${deviceId}, values=${safeStringify(values)}`);
     conn = await pool.getConnection();
-    
-    // Ensure we have 9 values, pad with zeros if needed
-    const paddedValues = [...values];
-    while (paddedValues.length < 9) {
-      paddedValues.push(0);
-    }
-    
-    const insertQuery = `
-      INSERT INTO ${tableName} 
-      (id, ip1, ip2, ip3, ip4, ip5, ip6, ip7, ip8, ip9) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    
-    const result = await conn.query(
-      insertQuery,
-      [deviceId, ...paddedValues]
-    );
-    
-    logger.debug(`Insert result: ${safeStringify(result)}`);
-    return result;
-  } catch (err) {
-    logger.error(`Error inserting data into ${tableName}:`, err);
-    logger.debug(`Database insert error details: ${safeStringify(err)}`);
-    throw err;
-  } finally {
-    if (conn) conn.release();
-  }
-};
-
-const getAllData = async (tableName: string): Promise<any[]> => {
-  let conn;
-  try {
-    logger.debug(`Attempting to retrieve all data from ${tableName}`);
-    conn = await pool.getConnection();
-    
-    const query = `SELECT * FROM ${tableName} ORDER BY timestamp DESC`;
-    const rows = await conn.query(query);
-    
-    logger.debug(`Query returned ${rows.length} rows from ${tableName}`);
-    return rows;
-  } catch (err) {
-    logger.error(`Error getting data from ${tableName}:`, err);
-    logger.debug(`Database query error details: ${safeStringify(err)}`);
-    throw err;
-  } finally {
-    if (conn) conn.release();
-  }
-};
-
-const getLatestData = async (tableName: string): Promise<any> => {
-  let conn;
-  try {
-    logger.debug(`Attempting to retrieve latest data from ${tableName}`);
-    conn = await pool.getConnection();
-    
-    const query = `SELECT * FROM ${tableName} ORDER BY timestamp DESC LIMIT 1`;
-    const rows = await conn.query(query);
-    
+    const rows = await conn.query('SELECT * FROM device_data ORDER BY created_at DESC LIMIT 1');
     return rows[0] || null;
   } catch (err) {
-    logger.error(`Error getting latest data from ${tableName}:`, err);
-    logger.debug(`Database query error details: ${safeStringify(err)}`);
+    logger.error('Error getting latest device data:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
+};
+
+export const getDevicesStatus = async (STATE?: string): Promise<{ [key: string]: number }> => {
+  let conn;
+  try {
+    // Parse state string or default to all zeros
+    const states: { [key: number]: number } = {};
+    if (STATE) {
+      STATE.split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        const stateNum = parseInt(key.replace('state', ''));
+        states[stateNum] = parseInt(value);
+      });
+    }
+
+    
+    conn = await pool.getConnection();
+    const result = await conn.query(`
+      SELECT 
+        SUM(CASE WHEN di.ip1 = ${states[1] ?? 0} OR di.ip1 IS NULL THEN 1 ELSE 0 END) as count1,
+        SUM(CASE WHEN di.ip2 = ${states[2] ?? 0} OR di.ip2 IS NULL THEN 1 ELSE 0 END) as count2,
+        SUM(CASE WHEN di.ip3 = ${states[3] ?? 0} OR di.ip3 IS NULL THEN 1 ELSE 0 END) as count3,
+        SUM(CASE WHEN di.ip4 = ${states[4] ?? 0} OR di.ip4 IS NULL THEN 1 ELSE 0 END) as count4,
+        SUM(CASE WHEN di.ip5 = ${states[5] ?? 0} OR di.ip5 IS NULL THEN 1 ELSE 0 END) as count5,
+        SUM(CASE WHEN di.ip6 = ${states[6] ?? 0} OR di.ip6 IS NULL THEN 1 ELSE 0 END) as count6,
+        SUM(CASE WHEN di.ip7 = ${states[7] ?? 0} OR di.ip7 IS NULL THEN 1 ELSE 0 END) as count7,
+        SUM(CASE WHEN di.ip8 = ${states[8] ?? 0} OR di.ip8 IS NULL THEN 1 ELSE 0 END) as count8,
+        SUM(CASE WHEN di.ip9 = ${states[9] ?? 0} OR di.ip9 IS NULL THEN 1 ELSE 0 END) as count9
+      FROM device_data d
+      LEFT JOIN (
+        SELECT di1.*
+        FROM digital_inputs di1
+        INNER JOIN (
+          SELECT id, MAX(created_at) as max_created_at
+          FROM digital_inputs
+          GROUP BY id
+        ) di2 ON di1.id = di2.id AND di1.created_at = di2.max_created_at
+      ) di ON d.id = di.id
+    `);
+    return result[0];
+  } catch (err) {
+    logger.error('Error getting devices count with specified digital inputs:', err);
     throw err;
   } finally {
     if (conn) conn.release();
@@ -265,12 +413,13 @@ export default {
   insertAnalyzerData,
   getAllAnalyzerData,
   getLatestAnalyzerData,
-  // Analog Input
-  insertAnalogInput,
-  getAllAnalogInput,
-  getLatestAnalogInput,
+  // Analog Inputs
+  insertAnalogInputs,
+  getAllAnalogInputs,
+  getLatestAnalogInputs,
   // Device Data
   insertDeviceData,
   getAllDeviceData,
-  getLatestDeviceData
+  getLatestDeviceData,
+  getDevicesStatus,
 }; 

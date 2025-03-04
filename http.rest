@@ -1,0 +1,52 @@
+@baseUrl = http://localhost:3000/api
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Digital Inputs - Get All
+GET {{baseUrl}}/digital-inputs
+
+### Digital Inputs - Get Latest
+GET {{baseUrl}}/digital-inputs/latest
+
+### Analyzer Data - Get All
+GET {{baseUrl}}/analyzer-data
+
+### Analyzer Data - Get Latest
+GET {{baseUrl}}/analyzer-data/latest
+
+### Analog Input - Get All
+GET {{baseUrl}}/analog-input
+
+### Analog Input - Get Latest
+GET {{baseUrl}}/analog-input/latest
+
+### Device Data - Get All
+GET {{baseUrl}}/device-data
+
+### Device Data - Get Latest
+GET {{baseUrl}}/device-data/latest
+
+### Device Status - Get Status with Specific States
+POST {{baseUrl}}/device-status
+Content-Type: application/json
+
+{
+    "STATE": "state1=1&state2=1&state3=0&state4=0&state5=0&state6=0&state7=0&state8=0&state9=0"
+}
+
+### Device Status - Get Status with No States (Default)
+POST {{baseUrl}}/device-status
+Content-Type: application/json
+
+{
+    "stateString": ""
+}
+
+### Device Status - Get Status with Partial States
+POST {{baseUrl}}/device-status
+Content-Type: application/json
+
+{
+    "stateString": "state1=1&state2=0&state3=1"
+} 

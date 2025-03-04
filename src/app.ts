@@ -5,6 +5,7 @@ import { env } from './config/env';
 import logger from './config/logger';
 import dataRoutes from './routes/data.routes';
 
+
 // Helper function to safely stringify objects containing BigInt
 const safeStringify = (obj: any): string => {
   return JSON.stringify(obj, (_, value) =>
@@ -34,42 +35,26 @@ if (env.nodeEnv === 'development') {
 
 // Routes
 logger.debug('Setting up API routes');
-app.use('/api', dataRoutes);
+app.use('/api', dataRoutes);  
+
 
 // Root route
 app.get('/', (req: Request, res: Response) => {
-  logger.debug(`Handling root route request: ${req.method} ${req.originalUrl}`);
+  logger.debug(`Received request for root route: ${req.method} ${req.originalUrl}`);
   res.json({
-    message: 'MQTT to MariaDB API',
+    message: 'Welcome to the MQTT to MariaDB API',
     version: '1.0.0',
+    status: 'running'
   });
-  logger.debug('Root route response sent');
 });
 
-// 404 handler
-app.use((req: Request, res: Response) => {
-  logger.debug(`404 Not Found: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({
-    success: false,
-    error: 'Route not found',
-  });
-  logger.debug('404 response sent');
-});
-
-// Error handler
+// Error handling middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   logger.error('Unhandled error:', err);
-  logger.debug(`Unhandled error details: ${safeStringify(err)}`);
-  logger.debug(`Error occurred on: ${req.method} ${req.originalUrl}`);
-  
   res.status(500).json({
     success: false,
-    error: 'Server Error',
+    error: 'Internal Server Error'
   });
-  
-  logger.debug('500 error response sent');
 });
 
-logger.debug('Express application initialized successfully');
-
-export default app; 
+export default app;

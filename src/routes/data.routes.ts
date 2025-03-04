@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import dataController from '../controllers/data.controller';
+import * as dataController from '../controllers/data.controller';
 
 const router = Router();
 
@@ -21,5 +21,6 @@ router.get('/analog-input/latest', dataController.getLatestAnalogInput);
 // Device Data routes
 router.get('/device-data', dataController.getAllDeviceData);
 router.get('/device-data/latest', dataController.getLatestDeviceData);
+router.post("/device-status", dataController.getDeviceStatus)
 
 export default router; 

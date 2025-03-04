@@ -113,7 +113,7 @@ export const getLatestAnalyzerData = async (req: Request, res: Response): Promis
 export const getAllAnalogInput = async (req: Request, res: Response): Promise<void> => {
   try {
     logger.debug(`Received request for all analog input: ${req.method} ${req.originalUrl}`);
-    const data = await dbService.getAllAnalogInput();
+    const data = await dbService.getAllAnalogInputs();
     
     res.status(200).json({
       success: true,
@@ -134,7 +134,7 @@ export const getAllAnalogInput = async (req: Request, res: Response): Promise<vo
 export const getLatestAnalogInput = async (req: Request, res: Response): Promise<void> => {
   try {
     logger.debug(`Received request for latest analog input: ${req.method} ${req.originalUrl}`);
-    const data = await dbService.getLatestAnalogInput();
+    const data = await dbService.getLatestAnalogInputs();
     
     if (!data) {
       res.status(404).json({
@@ -227,19 +227,21 @@ export const healthCheck = (req: Request, res: Response): void => {
   logger.debug('Health check response sent successfully');
 };
 
-export default {
-  // Digital Inputs
-  getAllDigitalInputs,
-  getLatestDigitalInputs,
-  // Analyzer Data
-  getAllAnalyzerData,
-  getLatestAnalyzerData,
-  // Analog Input
-  getAllAnalogInput,
-  getLatestAnalogInput,
-  // Device Data
-  getAllDeviceData,
-  getLatestDeviceData,
-  // Health Check
-  healthCheck,
-}; 
+export const getDeviceStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { STATE } = req.body;
+    logger.debug(`Received device status request with state string: ${STATE}`);
+    
+    const devices = await dbService.getDevicesStatus(STATE);
+    res.json({
+      success: true,
+      data: devices
+    });
+  } catch (err) {
+    logger.error('Error fetching devices:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch devices'
+    });
+  }
+}

@@ -23,7 +23,7 @@ export const env = {
   // MQTT
   mqttBrokerUrl: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
   mqttTopics: MQTT_TOPICS,
-  mqttClientId: process.env.MQTT_CLIENT_ID || 'mqtt-mariadb-app',
+  mqttClientId: process.env.MQTT_CLIENT_ID || 'eclb_noname',
   
   // Database
   db: {
