@@ -15,6 +15,10 @@ GET {{baseUrl}}/analyzer-data
 ### Analyzer Data - Get Latest
 GET {{baseUrl}}/analyzer-data/latest
 
+### Analyzer Data - Get Latest KW Values
+GET {{baseUrl}}/analyzer-data/latest-kw
+
+
 ### Analog Input - Get All
 GET {{baseUrl}}/analog-input
 

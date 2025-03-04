@@ -403,6 +403,36 @@ export const getDevicesStatus = async (STATE?: string): Promise<{ [key: string]:
   }
 };
 
+export const getAverageKW = async (): Promise<any> => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const result = await conn.query(`
+      SELECT AVG(latest_kw) as average_kw
+      FROM (
+        SELECT a1.kw as latest_kw
+        FROM device_data d
+        LEFT JOIN (
+          SELECT a1.*
+          FROM analyzer_data a1
+          INNER JOIN (
+            SELECT id, MAX(created_at) as max_created_at
+            FROM analyzer_data
+            GROUP BY id
+          ) a2 ON a1.id = a2.id AND a1.created_at = a2.max_created_at
+        ) a1 ON d.id = a1.id
+        WHERE a1.kw IS NOT NULL
+      ) latest_records
+    `);
+    return result[0];
+  } catch (err) {
+    logger.error('Error getting average KW:', err);
+    throw err;
+  } finally {
+    if (conn) conn.release();
+  }
+};
+
 export default {
   initDatabase,
   // Digital Inputs
@@ -413,6 +443,7 @@ export default {
   insertAnalyzerData,
   getAllAnalyzerData,
   getLatestAnalyzerData,
+  getAverageKW,
   // Analog Inputs
   insertAnalogInputs,
   getAllAnalogInputs,

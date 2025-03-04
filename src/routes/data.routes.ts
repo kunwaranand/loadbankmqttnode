@@ -13,6 +13,7 @@ router.get('/digital-inputs/latest', dataController.getLatestDigitalInputs);
 // Analyzer Data routes
 router.get('/analyzer-data', dataController.getAllAnalyzerData);
 router.get('/analyzer-data/latest', dataController.getLatestAnalyzerData);
+router.get('/analyzer-data/latest-kw', dataController.getAverageKW);
 
 // Analog Input routes
 router.get('/analog-input', dataController.getAllAnalogInput);

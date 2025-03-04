@@ -245,3 +245,59 @@ export const getDeviceStatus = async (req: Request, res: Response): Promise<void
     });
   }
 }
+
+interface AnalyzerDataItem {
+  id: string;
+  latest_kw: number | null;
+  created_at: string | null;
+}
+
+export const getAverageKW = async (req: Request, res: Response): Promise<void> => {
+  try {
+    logger.debug(`Received request for average KW value: ${req.method} ${req.originalUrl}`);
+    const result = await dbService.getAverageKW();
+    
+    if (!result || result.average_kw === null) {
+      res.status(404).json({
+        success: false,
+        error: 'No data found',
+      });
+      return;
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        average_kw: parseFloat(result.average_kw) || 0
+      }
+    });
+  } catch (err) {
+    logger.error('Error getting average KW value:', err);
+    logger.debug(`Error details: ${safeStringify(err)}`);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Server Error',
+    });
+  }
+};
+
+export default {
+  // Digital Inputs
+  getAllDigitalInputs,
+  getLatestDigitalInputs,
+  // Analyzer Data
+  getAllAnalyzerData,
+  getLatestAnalyzerData,
+  getAverageKW,
+  // Analog Input
+  getAllAnalogInput,
+  getLatestAnalogInput,
+  // Device Data
+  getAllDeviceData,
+  getLatestDeviceData,
+  // Health Check
+  healthCheck,
+  // Device Status
+  getDeviceStatus,
+};
