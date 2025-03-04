@@ -1,0 +1,2 @@
+2025-03-01 18:32:35 error: Error initializing database: (conn:-1, no: 45028, SQLState: HY000) retrieve connection from pool timeout after 10000ms
+    (pool connections: active=0 idle=0 limit=5)
