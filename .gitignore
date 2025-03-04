@@ -3,6 +3,7 @@ node_modules/
 npm-debug.log
 yarn-debug.log
 yarn-error.log
+logs/
 
 # Build
 dist/
@@ -20,6 +21,7 @@ build/
 .vscode/
 *.swp
 *.swo
+
 
 # OS
 .DS_Store
